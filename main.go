@@ -16,6 +16,7 @@ var usage = "%s [OPTION]... [FILE]...\n"
 
 var (
 	lines     = flag.Bool("l", false, "counts lines")
+	help      = flag.Bool("h", false, "display this message")
 	words     = flag.Bool("w", false, "counts words")
 	chars     = flag.Bool("c", false, "counts characters")
 	maxLength = flag.Bool("L", false, "print the length of the longest line")
@@ -26,17 +27,30 @@ var (
 func main() {
 	flag.Parse()
 
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+	if *help {
+		fmt.Printf(usage, os.Args[0])
 		flag.PrintDefaults()
 		return
 	}
 
-	f := flag.Arg(0)
+	var err error
+	var f string
 
-	file, err := ioutil.ReadFile(f) // For read access.
-	if err != nil {
-		log.Fatal(err)
+	buf := make([]byte, 0)
+
+	if len(flag.Args()) > 0 {
+		f = flag.Arg(0)
+
+		buf, err = ioutil.ReadFile(f)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+
+		buf, err = ioutil.ReadAll(os.Stdin)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	var r func(rune) bool
@@ -48,19 +62,19 @@ func main() {
 	} else if *chars {
 		r = isAll
 	} else if *maxLength {
-		result := getLongestLineLength(file)
+		result := getLongestLineLength(buf)
 		fmt.Printf("%d %s\n", result, f)
 		return
 	} else {
-		chars := decode(file, isAll)
-		words := decode(file, isWord)
-		lines := decode(file, isNewLine)
+		chars := decode(buf, isAll)
+		words := decode(buf, isWord)
+		lines := decode(buf, isNewLine)
 
 		fmt.Printf("%d %d %d %s\n", lines, words, chars, f)
 		return
 	}
 
-	results := decode(file, r)
+	results := decode(buf, r)
 
 	fmt.Printf("%d %s\n", results, f)
 }
